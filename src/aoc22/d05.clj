@@ -38,7 +38,7 @@
           idx
           mapping))
 
-(defn chain-walk [maps seed]
+(defn chain-walk [apply-mapping maps seed]
   (reduce #(apply-mapping (maps %2) %1) seed chain))
 
 (def lines (->> "d05" io/resource io/reader line-seq))
@@ -46,40 +46,44 @@
 (let [{:keys [seeds maps]} (reduce parse-lines
                                    {:parse-seeds parse-seeds}
                                    lines)]
-  (apply min (mapv #(chain-walk maps %) seeds)))
+  (apply min (mapv #(chain-walk apply-mapping maps %) seeds)))
 
 ;; p2 naive
 
 (defn rrange [[start num]] (range start (+ start num)))
 
-(defn parse-seeds2 [line]
+(defn parse-seed-ranges [line]
   (->> line (re-seq #"\d+") (map read-string) (partition 2)))
 
-(defn range-walk [maps seeds]
-  (future (let [_ (tap> ["starting" seeds])
-                result (time (apply min (map #(chain-walk maps %)
-                                             (rrange seeds))))
-                _ (tap> ["finished" seeds result])]
+(defn range-walk [apply-mapping maps seed-range]
+  (future (let [_ (tap> ["starting" seed-range])
+                result (time (apply min (map #(chain-walk apply-mapping maps %)
+                                             (rrange seed-range))))
+                _ (tap> ["finished" seed-range result])]
             result)))
 
 (time
- (let [{:keys [seeds maps]} (reduce parse-lines {:parse-seeds parse-seeds2} lines)]
-   (apply min (->> seeds (mapv #(range-walk maps %)) (map deref)))))
+ (let [{:keys [seed-ranges maps]} 
+       (reduce parse-lines {:parse-seeds parse-seed-ranges} lines)]
+   (apply min (->> seed-ranges
+                   (mapv #(range-walk apply-mapping maps %))
+                   (map deref)))))
 
 ;; p2 sorted maps
 
-(defn sort-mapping-by-gap [[k mapping]]
-  [k (sort-by #(- (nth % 1) (nth % 0)) mapping)])
+(defn sort-mapping-by-gap [[k m]] [k (sort-by #(- (nth % 1) (nth % 0)) m)])
 
 (time
- (let [{:keys [seeds maps]} (reduce parse-lines {:parse-seeds parse-seeds2} lines)
+ (let [{:keys [seed-ranges maps]}
+       (reduce parse-lines {:parse-seeds parse-seed-ranges} lines)
        sorted-maps (into {} (map sort-mapping-by-gap maps))]
-   (apply min (->> seeds (mapv #(range-walk sorted-maps %)) (map deref)))))
+   (apply min (->> seed-ranges
+                   (mapv #(range-walk apply-mapping sorted-maps %))
+                   (map deref)))))
 
 ;; p2 map tree
 
-(defn sort-mapping-asc [[k mapping]]
-  [k (sort-by first mapping)])
+(defn sort-mapping-asc [[k m]] [k (sort-by first m)])
 
 (defn mapping-tree [segments]
   (let [[left right] (split-at (/ (count segments) 2) segments)
@@ -88,21 +92,19 @@
         right (not-empty right)]
     [mid (when left (mapping-tree left)) (when right (mapping-tree right))]))
 
-(defn apply-mapping [[[start end offset] left right] val]
+(defn lookup-mtree [[[start end offset] left right] val]
   (cond
-    (< val start) (if left (apply-mapping left val) val)
-    (> val end) (if right (apply-mapping right val) val)
+    (< val start) (if left (lookup-mtree left val) val)
+    (> val end) (if right (lookup-mtree right val) val)
     :else (+ val offset)))
 
 (time
- (let [{:keys [seeds maps]} (reduce parse-lines
-                                    {:parse-seeds parse-seeds2}
-                                    lines)
+ (let [{:keys [seeds maps]}
+       (reduce parse-lines {:parse-seeds parse-seed-ranges} lines)
        mtrees (->> maps
                    (map sort-mapping-asc)
                    (map (fn [[k m]] [k (mapping-tree m)]))
                    (into {}))]
-   (tap> mtrees)
    (apply min (->> seeds
-                   (mapv #(range-walk mtrees %))
+                   (mapv #(range-walk lookup-mtree mtrees %))
                    (map deref)))))
