@@ -53,6 +53,7 @@
 (defn rrange [[start num]] (range start (+ start num)))
 
 (defn parse-seed-ranges [line]
+  (tap> line)
   (->> line (re-seq #"\d+") (map read-string) (partition 2)))
 
 (defn range-walk [apply-mapping maps seed-range]
@@ -63,9 +64,9 @@
             result)))
 
 (time
- (let [{:keys [seed-ranges maps]} 
+ (let [{:keys [seeds maps]}
        (reduce parse-lines {:parse-seeds parse-seed-ranges} lines)]
-   (apply min (->> seed-ranges
+   (apply min (->> seeds
                    (mapv #(range-walk apply-mapping maps %))
                    (map deref)))))
 
@@ -74,10 +75,10 @@
 (defn sort-mapping-by-gap [[k m]] [k (sort-by #(- (nth % 1) (nth % 0)) m)])
 
 (time
- (let [{:keys [seed-ranges maps]}
+ (let [{:keys [seeds maps]}
        (reduce parse-lines {:parse-seeds parse-seed-ranges} lines)
        sorted-maps (into {} (map sort-mapping-by-gap maps))]
-   (apply min (->> seed-ranges
+   (apply min (->> seeds
                    (mapv #(range-walk apply-mapping sorted-maps %))
                    (map deref)))))
 
