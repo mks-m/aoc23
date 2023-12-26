@@ -1,4 +1,4 @@
-(ns aoc22.d09
+(ns aoc23.d09
   (:require [clojure.java.io :as io]))
 
 (defn betweens [nums] (mapv #(- %2 %1) nums (drop 1 nums)))

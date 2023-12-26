@@ -1,4 +1,4 @@
-(ns aoc22.d08
+(ns aoc23.d08
   (:require [clojure.java.io :as io]))
 
 (def lines (->> "d08-test" io/resource io/reader line-seq))

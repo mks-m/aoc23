@@ -1,4 +1,4 @@
-(ns aoc22.d04
+(ns aoc23.d04
   (:require [clojure.java.io :as io]
             [clojure.set :as set]))
 

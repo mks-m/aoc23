@@ -1,4 +1,4 @@
-(ns aoc22.d05
+(ns aoc23.d05
   (:require [clojure.java.io :as io]))
 
 (add-tap println)

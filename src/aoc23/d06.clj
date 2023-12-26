@@ -1,4 +1,4 @@
-(ns aoc22.d06
+(ns aoc23.d06
   (:require [clojure.java.io :as io]))
 
 (def lines-test ["Time:      7  15   30"
